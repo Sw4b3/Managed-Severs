@@ -1,4 +1,5 @@
 package managed.fleet.api;
+import managed.fleet.common.Services.VBoxHostManager;
 import org.springframework.web.bind
         .annotation.GetMapping;
 import org.springframework.web.bind
@@ -17,8 +18,10 @@ public class HosManagerController {
     // the employees
     @GetMapping(path = "/", produces = "application/json")
 
-    public String Health()
+    public String CreateHost()
     {
-        return "Hello World";
+        new VBoxHostManager().createHost();
+
+        return "Ok";
     }
 }
