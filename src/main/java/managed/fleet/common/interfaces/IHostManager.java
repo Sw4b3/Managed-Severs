@@ -1,4 +1,4 @@
-package managed.fleet.common.Interfaces;
+package managed.fleet.common.interfaces;
 
 public interface IHostManager {
     public void run();

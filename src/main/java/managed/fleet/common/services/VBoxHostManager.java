@@ -1,7 +1,7 @@
-package managed.fleet.common.Services;
+package managed.fleet.common.services;
 
-import managed.fleet.common.Interfaces.IHostManager;
-import managed.fleet.common.Models.Host;
+import managed.fleet.common.interfaces.IHostManager;
+import managed.fleet.common.models.Host;
 import org.virtualbox_6_1.*;
 
 import java.util.ArrayList;

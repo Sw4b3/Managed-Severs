@@ -1,7 +1,7 @@
-package managed.fleet.common.Services;
+package managed.fleet.common.services;
 
-import managed.fleet.common.Models.HealthCheckConfiguration;
-import managed.fleet.common.Models.Host;
+import managed.fleet.common.models.HealthCheckConfiguration;
+import managed.fleet.common.models.Host;
 
 import java.io.IOException;
 import java.net.InetAddress;

@@ -1,4 +1,4 @@
-package managed.fleet.common.Models;
+package managed.fleet.common.models;
 
 public class Host {
     private String Name = null;
