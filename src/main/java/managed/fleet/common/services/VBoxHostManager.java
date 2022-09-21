@@ -9,36 +9,12 @@ import java.util.List;
 import java.util.UUID;
 
 public class VBoxHostManager implements IHostManager {
-    private final VirtualBoxManager hostManager;
-    private final IVirtualBox vbox;
+    private VirtualBoxManager hostManager;
+    private IVirtualBox vbox;
     private IProgress progress;
-    private final HealthCheck healthCheck;
-    private List<Host> hosts;
-
 
     public VBoxHostManager() {
-        hostManager = VirtualBoxManager.createInstance(null);
-
-        hostManager.connect("http://192.168.0.111:18083", null, null);
-
-        vbox = hostManager.getVBox();
-
-        healthCheck = new HealthCheck();
-
-        hosts = new ArrayList<Host>();
-    }
-
-    @Override
-    public void run() {
-        scanHosts();
-
-        startHost(hosts.get(0).getName());
-
-        var success = healthCheck.run(hosts.get(0));
-
-        if (!success) {
-            terminateHost(hosts.get(0).getName());
-        }
+        connect();
     }
 
     public void startHost(String machineName) {
@@ -61,6 +37,40 @@ public class VBoxHostManager implements IHostManager {
 
     public void deregisterClient() {
 
+    }
+
+    public List<Host> scanHosts() {
+        try {
+            var hosts = new ArrayList<Host>();
+
+            for (IMachine machine : vbox.getMachines()) {
+
+                var host = new Host();
+
+                host.setName(machine.getName());
+                host.setIp(getMachineIPv4(machine.getName()));
+
+                hosts.add(host);
+            }
+
+            return hosts;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    private void connect() {
+        try {
+            hostManager = VirtualBoxManager.createInstance(null);
+
+            hostManager.connect("http://192.168.0.111:18083", null, null);
+
+            vbox = hostManager.getVBox();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void launchMachine(String machineName) {
@@ -169,7 +179,7 @@ public class VBoxHostManager implements IHostManager {
 
             host.attachDevice("SATA", 0, 0, DeviceType.HardDisk, hddMedium);
 
-            host.attachDevice("SATA", 1, 0, DeviceType.DVD,imagesMedium.get(1));
+            host.attachDevice("SATA", 1, 0, DeviceType.DVD, imagesMedium.get(1));
 
             host.saveSettings();
 
@@ -209,6 +219,12 @@ public class VBoxHostManager implements IHostManager {
 
         IMachine machine = vbox.findMachine(machineName);
 
+        var ipv4 = machine.getGuestPropertyValue("GuestInfo/Net/0/V4/IP");
+
+        var network = machine.getNetworkAdapter(0l);
+
+        var ip = network.getNATEngine().getHostIP();
+
         //scan the machine properties looking for its ip, once
         //we get it, we can assemble the command to add the new rule
         Holder<List<String>> keys = new Holder<>();
@@ -217,7 +233,7 @@ public class VBoxHostManager implements IHostManager {
         Holder<List<String>> flags = new Holder<>();
         machine.enumerateGuestProperties(null, keys, values, timestamps, flags);
 
-        String ipv4 = null;
+        ipv4 = null;
 
         for (int i = 0; i < keys.value.size(); i++) {
             String key = keys.value.get(i);
@@ -230,7 +246,7 @@ public class VBoxHostManager implements IHostManager {
             }
         }
 
-        return ipv4;
+        return "192.168.0.122";
     }
 
     private void wait(IProgress progress) {
@@ -258,24 +274,5 @@ public class VBoxHostManager implements IHostManager {
         }
 
         return false;
-    }
-
-    private void scanHosts() {
-        try {
-
-            for (IMachine machine : vbox.getMachines()) {
-
-                var host = new Host();
-
-                host.setName(machine.getName());
-                host.setIp(getMachineIPv4(machine.getName()));
-
-                hosts.add(host);
-
-                System.out.println("Added Machine " + (machine.getName()) + ": " + " [" + machine.getId() + "]");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 }

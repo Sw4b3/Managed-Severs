@@ -1,17 +1,22 @@
 package managed.fleet.api.controllers;
 
+import managed.fleet.common.interfaces.IHostManager;
 import managed.fleet.common.services.VBoxHostManager;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping(path = "/host")
+@RequestMapping(path = "/hostmanager")
 public class HostManagerController {
+
+    private final IHostManager manager;
+
+    public  HostManagerController(){
+        this.manager = new VBoxHostManager();
+    }
+
     @GetMapping(path = "/create", produces = "application/json")
     public String CreateHost() {
-        new VBoxHostManager().createHost();
+        manager.registerClient();
 
         return "Ok";
     }
@@ -21,16 +26,16 @@ public class HostManagerController {
         throw new Exception("Endpoint not created yet");
     }
 
-    @GetMapping(path = "/start", produces = "application/json")
-    public String StartHost() {
-        new VBoxHostManager().startHost("vm0");
+    @PostMapping(path = "/start", produces = "application/json")
+    public String StartHost(@RequestBody String hostName) {
+        manager.startHost(hostName);
 
         return "Ok";
     }
 
     @GetMapping(path = "/terminate", produces = "application/json")
     public String TerminateHost() {
-        new VBoxHostManager().terminateHost("vm0");
+        manager.terminateHost("vm0");
 
         return "Ok";
     }
