@@ -8,7 +8,6 @@ import common.utlis.HttpClientFactory;
 import org.virtualbox_6_1.MachineState;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,7 +25,7 @@ public class HealthCheckService {
     public void run() {
         try {
             while (!checkHealth("http://localhost:8080/health/")) {
-                System.out.println("Host Manager is currently unavailable");
+                System.out.println("Host Manager Server is currently unavailable");
 
                 Thread.sleep(5000);
             }
@@ -41,7 +40,7 @@ public class HealthCheckService {
                     host.setState(updateState(host.getName()));
 
                     if (host.getState().equals(MachineState.Running)) {
-                        System.out.println("Checking health for Host:: " + host.getName());
+                        System.out.println("Checking health for Host::" + host.getName());
 
                         if (host.getIp() == null || host.getIp().equals("0.0.0.0"))
                             host.setIp(getIp(host.getName()));
@@ -53,7 +52,7 @@ public class HealthCheckService {
                         host.setConcurrentFailure(!isReachable ? host.getConcurrentFailure() + 1 : 0);
 
                         if (host.getConcurrentFailure() == configuration.getConcurrentFailureThreshold()) {
-                            System.out.println("Terminating host:: " + host.getName());
+                            System.out.println("Terminating host::" + host.getName());
 
                             terminateHost(host.getName());
                         }
@@ -61,7 +60,7 @@ public class HealthCheckService {
                         Thread.sleep(configuration.getWait());
                     }
                     if (host.getState().equals(MachineState.PoweredOff)) {
-                        System.out.println("Starting host:: " + host.getName());
+                        System.out.println("Starting host::" + host.getName());
 
                         startHost(host.getName());
                     }
@@ -69,9 +68,8 @@ public class HealthCheckService {
 
                 Thread.sleep(10000);
             }
-        }
-        catch (IOException | InterruptedException e) {
-            System.out.println(e);
+        } catch (IOException | InterruptedException e) {
+           e.printStackTrace();
         }
     }
 
@@ -82,18 +80,18 @@ public class HealthCheckService {
             if (response.statusCode() == 200)
                 return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("Health Check failed::" + uri);
         }
 
         return false;
     }
 
     private boolean pingIp(String ip) throws IOException {
-            InetAddress inet = InetAddress.getByName(ip);
+        InetAddress inet = InetAddress.getByName(ip);
 
-            System.out.println("Sending Ping Request to " + ip);
+        System.out.println("Sending Ping Request to " + ip);
 
-            return inet.isReachable(configuration.getTimeoutThreshold());
+        return inet.isReachable(configuration.getTimeoutThreshold());
     }
 
     private String getIp(String hostName) {
