@@ -1,5 +1,6 @@
 package monitored.fleet.process.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import common.models.HealthCheckConfiguration;
 import common.models.Host;
@@ -8,10 +9,6 @@ import org.virtualbox_6_1.MachineState;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -25,30 +22,28 @@ public class HealthCheckService {
         httpClient = new HttpClientFactory();
     }
 
-    public void run() throws Exception {
-        while (!checkHealth("http://localhost:8080/health/")) {
-            System.out.println("Host Manager is currently unavailable");
+    public void run() {
+        try {
+            while (!checkHealth("http://localhost:8080/health/")) {
+                System.out.println("Host Manager Server is currently unavailable");
 
-            Thread.sleep(5000);
-        }
-        List<Host> hosts = scanHosts();
+                Thread.sleep(5000);
+            }
 
-        while (true) {
-            if (hosts.isEmpty())
-                throw new Exception("There are no hosts");
+            List<Host> hosts = scanHosts();
 
-            try {
+            while (true) {
+                if (hosts.isEmpty())
+                    throw new RuntimeException("There are no hosts");
+
                 for (var host : hosts) {
+                    host.setState(updateState(host.getName()));
+
                     if (host.getState().equals(MachineState.Running)) {
-                        System.out.println("Checking health for Host:: " + host.getName());
+                        System.out.println("Checking health for Host::" + host.getName());
 
-                        if (host.getIp() == null || host.getIp() == "0.0.0.0")
+                        if (host.getIp() == null || host.getIp().equals("0.0.0.0"))
                             host.setIp(getIp(host.getName()));
-
-                        if (host == null) {
-                            System.out.println("No Hosts");
-                            break;
-                        }
 
                         var isReachable = pingIp(host.getIp());
 
@@ -57,7 +52,7 @@ public class HealthCheckService {
                         host.setConcurrentFailure(!isReachable ? host.getConcurrentFailure() + 1 : 0);
 
                         if (host.getConcurrentFailure() == configuration.getConcurrentFailureThreshold()) {
-                            System.out.println("Terminating host:: " + host.getName());
+                            System.out.println("Terminating host::" + host.getName());
 
                             terminateHost(host.getName());
                         }
@@ -65,18 +60,16 @@ public class HealthCheckService {
                         Thread.sleep(configuration.getWait());
                     }
                     if (host.getState().equals(MachineState.PoweredOff)) {
-                        System.out.println("Starting host:: " + host.getName());
+                        System.out.println("Starting host::" + host.getName());
 
                         startHost(host.getName());
                     }
                 }
-            } catch (IOException e) {
-                System.out.println(e);
-            } catch (InterruptedException e) {
-                System.out.println(e);
-            }
 
-            Thread.sleep(10000);
+                Thread.sleep(10000);
+            }
+        } catch (IOException | InterruptedException e) {
+           e.printStackTrace();
         }
     }
 
@@ -87,7 +80,7 @@ public class HealthCheckService {
             if (response.statusCode() == 200)
                 return true;
         } catch (Exception e) {
-            System.out.println(e);
+            System.out.println("Health Check failed::" + uri);
         }
 
         return false;
@@ -102,9 +95,21 @@ public class HealthCheckService {
     }
 
     private String getIp(String hostName) {
-        var response = httpClient.PostRequest("http://localhost:8080/host/GetHostIp", hostName);
+        var response = httpClient.GetRequest("http://localhost:8080/Host/GetIp?hostName=" + hostName);
 
         return response.body().toString();
+    }
+
+    private MachineState updateState(String hostName) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            var response = httpClient.GetRequest("http://localhost:8080/Host/GetState?hostName=" + hostName);
+
+            return objectMapper.readValue(response.body().toString(), MachineState.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void startHost(String hostName) {
