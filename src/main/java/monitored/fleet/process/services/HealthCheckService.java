@@ -1,5 +1,6 @@
 package monitored.fleet.process.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import common.models.HealthCheckConfiguration;
 import common.models.Host;
@@ -7,11 +8,8 @@ import common.utlis.HttpClientFactory;
 import org.virtualbox_6_1.MachineState;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetAddress;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -25,30 +23,28 @@ public class HealthCheckService {
         httpClient = new HttpClientFactory();
     }
 
-    public void run() throws Exception {
-        while (!checkHealth("http://localhost:8080/health/")) {
-            System.out.println("Host Manager is currently unavailable");
+    public void run() {
+        try {
+            while (!checkHealth("http://localhost:8080/health/")) {
+                System.out.println("Host Manager is currently unavailable");
 
-            Thread.sleep(5000);
-        }
-        List<Host> hosts = scanHosts();
+                Thread.sleep(5000);
+            }
 
-        while (true) {
-            if (hosts.isEmpty())
-                throw new Exception("There are no hosts");
+            List<Host> hosts = scanHosts();
 
-            try {
+            while (true) {
+                if (hosts.isEmpty())
+                    throw new RuntimeException("There are no hosts");
+
                 for (var host : hosts) {
+                    host.setState(updateState(host.getName()));
+
                     if (host.getState().equals(MachineState.Running)) {
                         System.out.println("Checking health for Host:: " + host.getName());
 
-                        if (host.getIp() == null || host.getIp() == "0.0.0.0")
+                        if (host.getIp() == null || host.getIp().equals("0.0.0.0"))
                             host.setIp(getIp(host.getName()));
-
-                        if (host == null) {
-                            System.out.println("No Hosts");
-                            break;
-                        }
 
                         var isReachable = pingIp(host.getIp());
 
@@ -70,13 +66,12 @@ public class HealthCheckService {
                         startHost(host.getName());
                     }
                 }
-            } catch (IOException e) {
-                System.out.println(e);
-            } catch (InterruptedException e) {
-                System.out.println(e);
-            }
 
-            Thread.sleep(10000);
+                Thread.sleep(10000);
+            }
+        }
+        catch (IOException | InterruptedException e) {
+            System.out.println(e);
         }
     }
 
@@ -87,24 +82,36 @@ public class HealthCheckService {
             if (response.statusCode() == 200)
                 return true;
         } catch (Exception e) {
-            System.out.println(e);
+            e.printStackTrace();
         }
 
         return false;
     }
 
     private boolean pingIp(String ip) throws IOException {
-        InetAddress inet = InetAddress.getByName(ip);
+            InetAddress inet = InetAddress.getByName(ip);
 
-        System.out.println("Sending Ping Request to " + ip);
+            System.out.println("Sending Ping Request to " + ip);
 
-        return inet.isReachable(configuration.getTimeoutThreshold());
+            return inet.isReachable(configuration.getTimeoutThreshold());
     }
 
     private String getIp(String hostName) {
-        var response = httpClient.PostRequest("http://localhost:8080/host/GetHostIp", hostName);
+        var response = httpClient.GetRequest("http://localhost:8080/Host/GetIp?hostName=" + hostName);
 
         return response.body().toString();
+    }
+
+    private MachineState updateState(String hostName) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            var response = httpClient.GetRequest("http://localhost:8080/Host/GetState?hostName=" + hostName);
+
+            return objectMapper.readValue(response.body().toString(), MachineState.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void startHost(String hostName) {

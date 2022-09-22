@@ -23,6 +23,8 @@ public class HostManagerController {
 
     @GetMapping(path = "/delete", produces = "application/json")
     public String DeleteHost() throws Exception {
+        manager.deregisterClient();
+
         throw new Exception("Endpoint not created yet");
     }
 

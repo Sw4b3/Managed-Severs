@@ -1,7 +1,7 @@
 package managed.fleet.api.services;
 
 import managed.fleet.api.interfaces.IHostManager;
-import common.models.Host;
+import managed.fleet.api.interfaces.IHostService;
 import org.virtualbox_6_1.*;
 
 import java.util.ArrayList;
@@ -9,11 +9,14 @@ import java.util.List;
 import java.util.UUID;
 
 public class VBoxHostManager implements IHostManager {
+    private final IHostService hostService;
     private VirtualBoxManager hostManager;
     private IVirtualBox vbox;
-    private IProgress progress;
+     IProgress progress;
 
     public VBoxHostManager() {
+        hostService = new HostService();
+
         connect();
     }
 
@@ -32,7 +35,7 @@ public class VBoxHostManager implements IHostManager {
 
     @Override
     public void registerClient() {
-        createHost();
+        createMachine();
     }
 
     public void deregisterClient() {
@@ -51,32 +54,8 @@ public class VBoxHostManager implements IHostManager {
         }
     }
 
-    public List<Host> scanHosts() {
-        try {
-            var hosts = new ArrayList<Host>();
-
-            for (IMachine machine : vbox.getMachines()) {
-
-                var host = new Host();
-
-                host.setName(machine.getName());
-                host.setIp(getMachineIPv4(machine.getName()));
-                host.setMAC(machine.getNetworkAdapter(0l).getMACAddress());
-                host.setState(machine.getState());
-
-                hosts.add(host);
-            }
-
-            return hosts;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return null;
-    }
-
     private void launchMachine(String machineName) {
-        if (!machineExists(machineName)) {
+        if (!hostService.machineExists(machineName)) {
             return;
         }
 
@@ -90,7 +69,7 @@ public class VBoxHostManager implements IHostManager {
 
                 progress.waitForCompletion(1000);
             } finally {
-                session.unlockMachine();
+                waitToUnlock(session, machine);
             }
         } else {
             System.out.println("Host is already running");
@@ -98,7 +77,7 @@ public class VBoxHostManager implements IHostManager {
     }
 
     private void shutdownMachine(String machineName) {
-        if (!machineExists(machineName)) {
+        if (!hostService.machineExists(machineName)) {
             return;
         }
 
@@ -122,7 +101,7 @@ public class VBoxHostManager implements IHostManager {
         }
     }
 
-    public void createHost() {
+    private void createMachine() {
         try {
             System.out.println("Creating Host");
 
@@ -138,7 +117,7 @@ public class VBoxHostManager implements IHostManager {
 
             var storageController = host.addStorageController("SATA", StorageBus.SATA);
 
-            storageController.setPortCount(2l);
+            storageController.setPortCount(2L);
 
             var hddMedium = vbox.createMedium("vdi", "D:/VirtualBox VMs/vm/", AccessMode.ReadWrite, DeviceType.HardDisk);
 
@@ -216,17 +195,6 @@ public class VBoxHostManager implements IHostManager {
         }
     }
 
-    public String getMachineIPv4(String machineName) {
-        if (!machineExists(machineName))
-            return null;
-
-        IMachine machine = vbox.findMachine(machineName);
-
-        var ip = machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/0/V4/IP");
-
-        return ip != "" ? ip : "0.0.0.0";
-    }
-
     private void wait(IProgress progress) {
         //make this available for the caller
         this.progress = progress;
@@ -236,21 +204,5 @@ public class VBoxHostManager implements IHostManager {
         if (progress.getResultCode() != 0) {
             System.err.println("Operation failed: " + progress.getErrorInfo().getText());
         }
-    }
-
-    private boolean machineExists(String machineName) {
-        if (machineName == null) {
-            return false;
-        }
-
-        List<IMachine> machines = vbox.getMachines();
-
-        for (IMachine machine : machines) {
-            if (machine.getName().equals(machineName)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }
