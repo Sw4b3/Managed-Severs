@@ -1,7 +1,7 @@
-package managed.fleet.common.services;
+package managed.fleet.api.services;
 
-import managed.fleet.common.interfaces.IHostManager;
-import managed.fleet.common.models.Host;
+import managed.fleet.api.interfaces.IHostManager;
+import common.models.Host;
 import org.virtualbox_6_1.*;
 
 import java.util.ArrayList;
@@ -39,6 +39,18 @@ public class VBoxHostManager implements IHostManager {
 
     }
 
+    private void connect() {
+        try {
+            hostManager = VirtualBoxManager.createInstance(null);
+
+            hostManager.connect("http://192.168.0.111:18083", null, null);
+
+            vbox = hostManager.getVBox();
+        } catch (Exception e) {
+            System.out.println("Web server is unavailable");
+        }
+    }
+
     public List<Host> scanHosts() {
         try {
             var hosts = new ArrayList<Host>();
@@ -49,6 +61,8 @@ public class VBoxHostManager implements IHostManager {
 
                 host.setName(machine.getName());
                 host.setIp(getMachineIPv4(machine.getName()));
+                host.setMAC(machine.getNetworkAdapter(0l).getMACAddress());
+                host.setState(machine.getState());
 
                 hosts.add(host);
             }
@@ -59,18 +73,6 @@ public class VBoxHostManager implements IHostManager {
         }
 
         return null;
-    }
-
-    private void connect() {
-        try {
-            hostManager = VirtualBoxManager.createInstance(null);
-
-            hostManager.connect("http://192.168.0.111:18083", null, null);
-
-            vbox = hostManager.getVBox();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     private void launchMachine(String machineName) {
@@ -130,6 +132,8 @@ public class VBoxHostManager implements IHostManager {
 
             host.setMemorySize(2048L);
 
+            host.getGraphicsAdapter().setVRAMSize(18L);
+
             System.out.println("Configuring Storage");
 
             var storageController = host.addStorageController("SATA", StorageBus.SATA);
@@ -145,7 +149,7 @@ public class VBoxHostManager implements IHostManager {
             hddMediumVariants.add(MediumVariant.Fixed);
             hddMediumVariants.add(MediumVariant.VdiZeroExpand);
 
-            var progress = hddMedium.createBaseStorage(10737418240L, hddMediumVariants);
+            var progress = hddMedium.createBaseStorage(20737418240L, hddMediumVariants);
 
             progress.waitForCompletion(1000000000);
 
@@ -213,40 +217,14 @@ public class VBoxHostManager implements IHostManager {
     }
 
     public String getMachineIPv4(String machineName) {
-        if (!machineExists(machineName)) {
+        if (!machineExists(machineName))
             return null;
-        }
 
         IMachine machine = vbox.findMachine(machineName);
 
-        var ipv4 = machine.getGuestPropertyValue("GuestInfo/Net/0/V4/IP");
+        var ip = machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/0/V4/IP");
 
-        var network = machine.getNetworkAdapter(0l);
-
-        var ip = network.getNATEngine().getHostIP();
-
-        //scan the machine properties looking for its ip, once
-        //we get it, we can assemble the command to add the new rule
-        Holder<List<String>> keys = new Holder<>();
-        Holder<List<String>> values = new Holder<>();
-        Holder<List<Long>> timestamps = new Holder<>();
-        Holder<List<String>> flags = new Holder<>();
-        machine.enumerateGuestProperties(null, keys, values, timestamps, flags);
-
-        ipv4 = null;
-
-        for (int i = 0; i < keys.value.size(); i++) {
-            String key = keys.value.get(i);
-
-            String val = values.value.get(i);
-
-            if (key.contains("GuestInfo/Net/0/V4/IP") && val.startsWith("10.0")) {
-                ipv4 = val;
-                break;
-            }
-        }
-
-        return "192.168.0.122";
+        return ip != "" ? ip : "0.0.0.0";
     }
 
     private void wait(IProgress progress) {

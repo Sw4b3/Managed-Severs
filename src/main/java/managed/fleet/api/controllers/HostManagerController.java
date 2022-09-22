@@ -1,7 +1,7 @@
 package managed.fleet.api.controllers;
 
-import managed.fleet.common.interfaces.IHostManager;
-import managed.fleet.common.services.VBoxHostManager;
+import managed.fleet.api.interfaces.IHostManager;
+import managed.fleet.api.services.VBoxHostManager;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

@@ -1,6 +1,6 @@
-package monitored.fleet;
+package monitored.fleet.process;
 
-import monitored.fleet.services.HealthCheckService;
+import monitored.fleet.process.services.HealthCheckService;
 
 public class Main {
 

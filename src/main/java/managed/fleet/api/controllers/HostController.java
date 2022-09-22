@@ -1,8 +1,7 @@
 package managed.fleet.api.controllers;
 
-import managed.fleet.common.interfaces.IHostManager;
-import managed.fleet.common.models.Host;
-import managed.fleet.common.services.VBoxHostManager;
+import common.models.Host;
+import managed.fleet.api.services.VBoxHostManager;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

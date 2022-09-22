@@ -1,4 +1,4 @@
-package managed.fleet.common.models;
+package common.models;
 
 public class HealthCheckConfiguration {
     private int Attempts = 5;

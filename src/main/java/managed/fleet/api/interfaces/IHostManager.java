@@ -1,4 +1,4 @@
-package managed.fleet.common.interfaces;
+package managed.fleet.api.interfaces;
 
 public interface IHostManager {
     public  void startHost(String machineName);
