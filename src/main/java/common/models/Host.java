@@ -7,6 +7,7 @@ public class Host {
     private String Ip = "0.0.0.0";
     private String MAC = null;
     private MachineState State = null;
+    private int ConcurrentFailure = 0;
 
     public String getIp() {
         return Ip;
@@ -38,5 +39,13 @@ public class Host {
 
     public void setState(MachineState state) {
         State = state;
+    }
+
+    public int getConcurrentFailure() {
+        return ConcurrentFailure;
+    }
+
+    public void setConcurrentFailure(int concurrentFailure) {
+        ConcurrentFailure = concurrentFailure;
     }
 }

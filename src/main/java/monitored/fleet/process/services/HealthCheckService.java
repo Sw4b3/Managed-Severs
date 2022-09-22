@@ -31,11 +31,9 @@ public class HealthCheckService {
 
             Thread.sleep(5000);
         }
-        List<Host> hosts = null;
+        List<Host> hosts = scanHosts();
 
         while (true) {
-            hosts = scanHosts();
-
             if (hosts.isEmpty())
                 throw new Exception("There are no hosts");
 
@@ -47,8 +45,6 @@ public class HealthCheckService {
                         if (host.getIp() == null || host.getIp() == "0.0.0.0")
                             host.setIp(getIp(host.getName()));
 
-                        // int CurrentFailureConcurrency = 0;
-
                         if (host == null) {
                             System.out.println("No Hosts");
                             break;
@@ -58,16 +54,17 @@ public class HealthCheckService {
 
                         System.out.println(isReachable ? "Host is reachable" : "Host is not reachable");
 
-                        //CurrentFailureConcurrency = !isReachable ? CurrentFailureConcurrency + 1 : 0;
+                        host.setConcurrentFailure(!isReachable ? host.getConcurrentFailure() + 1 : 0);
 
-                        // if (CurrentFailureConcurrency == configuration.getConcurrentFailureThreshold()) {
-                        //     System.out.println("Terminate host");
+                        if (host.getConcurrentFailure() == configuration.getConcurrentFailureThreshold()) {
+                            System.out.println("Terminating host:: " + host.getName());
 
-                        //    break;
-                        //  }
+                            terminateHost(host.getName());
+                        }
 
                         Thread.sleep(configuration.getWait());
-                    } else {
+                    }
+                    if (host.getState().equals(MachineState.PoweredOff)) {
                         System.out.println("Starting host:: " + host.getName());
 
                         startHost(host.getName());
@@ -115,6 +112,15 @@ public class HealthCheckService {
 
         if (response.statusCode() == 200)
             System.out.println("Host successfully started");
+        else
+            System.out.println("Host failed to start");
+    }
+
+    private void terminateHost(String hostName) {
+        var response = httpClient.PostRequest("http://localhost:8080/hostmanager/terminate", hostName);
+
+        if (response.statusCode() == 200)
+            System.out.println("Host successfully terminated");
         else
             System.out.println("Host failed to start");
     }

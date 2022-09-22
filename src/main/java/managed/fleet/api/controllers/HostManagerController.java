@@ -33,9 +33,9 @@ public class HostManagerController {
         return "Ok";
     }
 
-    @GetMapping(path = "/terminate", produces = "application/json")
-    public String TerminateHost() {
-        manager.terminateHost("vm0");
+    @PostMapping(path = "/terminate", produces = "application/json")
+    public String TerminateHost(@RequestBody String hostName) {
+        manager.terminateHost(hostName);
 
         return "Ok";
     }
