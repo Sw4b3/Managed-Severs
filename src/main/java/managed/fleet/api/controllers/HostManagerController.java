@@ -22,10 +22,10 @@ public class HostManagerController {
     }
 
     @GetMapping(path = "/delete", produces = "application/json")
-    public String DeleteHost() throws Exception {
-        manager.deregisterClient();
+    public String DeleteHost(@RequestParam String hostName)  {
+        manager.deregisterClient(hostName);
 
-        throw new Exception("Endpoint not created yet");
+        return "Ok";
     }
 
     @PostMapping(path = "/start", produces = "application/json")
@@ -35,8 +35,8 @@ public class HostManagerController {
         return "Ok";
     }
 
-    @PostMapping(path = "/terminate", produces = "application/json")
-    public String TerminateHost(@RequestBody String hostName) {
+    @GetMapping(path = "/terminate", produces = "application/json")
+    public String TerminateHost(@RequestParam String hostName) {
         manager.terminateHost(hostName);
 
         return "Ok";

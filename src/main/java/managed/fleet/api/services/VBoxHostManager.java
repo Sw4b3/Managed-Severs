@@ -12,7 +12,7 @@ public class VBoxHostManager implements IHostManager {
     private final IHostService hostService;
     private VirtualBoxManager hostManager;
     private IVirtualBox vbox;
-     IProgress progress;
+    IProgress progress;
 
     public VBoxHostManager() {
         hostService = new HostService();
@@ -38,8 +38,11 @@ public class VBoxHostManager implements IHostManager {
         createMachine();
     }
 
-    public void deregisterClient() {
+    @Override
+    public void deregisterClient(String machineName) {
+        System.out.println("Unregistering Host");
 
+        deregisteredMachine(machineName);
     }
 
     private void connect() {
@@ -175,6 +178,15 @@ public class VBoxHostManager implements IHostManager {
 
             e.printStackTrace();
         }
+    }
+
+    private void deregisteredMachine(String machineName) {
+        if (!hostService.machineExists(machineName))
+            return;
+
+        IMachine machine = vbox.findMachine(machineName);
+
+        machine.unregister(CleanupMode.Full);
     }
 
     private void waitToUnlock(ISession session, IMachine machine) {
