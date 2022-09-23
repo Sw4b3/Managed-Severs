@@ -33,12 +33,12 @@ public class HostService implements IHostService {
 
             for (IMachine machine : vbox.getMachines()) {
 
-                var host = new Host();
-
-                host.setName(machine.getName());
-                host.setIp(getMachineIPv4(machine.getName()));
-                host.setMAC(machine.getNetworkAdapter(0L).getMACAddress());
-                host.setState(machine.getState());
+                var host = new Host(
+                        machine.getName(),
+                        getMachineIPv4(machine.getName()),
+                        machine.getNetworkAdapter(0L).getMACAddress(),
+                        machine.getState()
+                );
 
                 hosts.add(host);
             }
