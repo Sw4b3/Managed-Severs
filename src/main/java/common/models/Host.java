@@ -9,6 +9,16 @@ public class Host {
     private MachineState State = null;
     private int ConcurrentFailure = 0;
 
+    public Host() {
+    }
+
+    public Host(String name, String ip, String mac, MachineState state) {
+        Name = name;
+        Ip = ip;
+        MAC = mac;
+        State = state;
+    }
+
     public String getIp() {
         return Ip;
     }

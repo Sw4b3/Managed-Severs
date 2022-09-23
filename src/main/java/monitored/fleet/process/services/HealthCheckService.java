@@ -4,7 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import common.models.HealthCheckConfiguration;
 import common.models.Host;
+import common.models.RetryPolicy;
 import common.utlis.HttpClientFactory;
+import common.utlis.RetryStrategy;
 import org.virtualbox_6_1.MachineState;
 
 import java.io.IOException;
@@ -13,26 +15,31 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class HealthCheckService {
+public class HealthCheckService implements Runnable {
     private final HealthCheckConfiguration configuration;
     private final HttpClientFactory httpClient;
+    private boolean cancellationToken = false;
 
     public HealthCheckService() {
         configuration = new HealthCheckConfiguration();
         httpClient = new HttpClientFactory();
     }
 
+    @Override
     public void run() {
-        try {
-            while (!checkHealth("http://localhost:8080/health/")) {
-                System.out.println("Host Manager Server is currently unavailable");
+        var policy = new RetryPolicy<>(() -> checkHealth("http://localhost:8080/health/"), r -> true, 3, true);
 
-                Thread.sleep(5000);
-            }
+        var success = RetryStrategy.execute(policy);
 
-            List<Host> hosts = scanHosts();
+        if (!success) {
+            System.out.println("Host Manager Server is currently unavailable");
+            return;
+        }
 
-            while (true) {
+        List<Host> hosts = scanHosts();
+
+        while (!cancellationToken) {
+            try {
                 if (hosts.isEmpty())
                     throw new RuntimeException("There are no hosts");
 
@@ -56,8 +63,6 @@ public class HealthCheckService {
 
                             terminateHost(host.getName());
                         }
-
-                        Thread.sleep(configuration.getWait());
                     }
                     if (host.getState().equals(MachineState.PoweredOff)) {
                         System.out.println("Starting host::" + host.getName());
@@ -66,10 +71,11 @@ public class HealthCheckService {
                     }
                 }
 
-                Thread.sleep(10000);
+                Thread.sleep(configuration.getWait());
+
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
             }
-        } catch (IOException | InterruptedException e) {
-           e.printStackTrace();
         }
     }
 
