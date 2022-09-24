@@ -1,5 +1,8 @@
 package common.utlis;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.xml.ws.http.HTTPException;
 import java.io.IOException;
 import java.net.ConnectException;
@@ -8,10 +11,13 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
+
 public class HttpClientFactory {
-    HttpClient client;
+    private final HttpClient client;
+    private static Logger logger;
 
     public HttpClientFactory() {
+        logger = LoggerFactory.getLogger(this.getClass());
         client = HttpClient.newHttpClient();
     }
 
@@ -27,7 +33,7 @@ public class HttpClientFactory {
 
             return response;
         } catch (ConnectException e) {
-            System.out.println("Unable to connect::" + uri);
+            logger.error("Unable to connect::" + uri);
             throw new RuntimeException(e);
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
@@ -42,9 +48,7 @@ public class HttpClientFactory {
 
         try {
             return client.send(request, HttpResponse.BodyHandlers.ofString());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (InterruptedException e) {
+        } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }

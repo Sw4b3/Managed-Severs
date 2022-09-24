@@ -1,10 +1,9 @@
 package common.utlis;
 
 import common.models.RetryPolicy;
-import org.springframework.lang.Nullable;
 
 public class RetryStrategy {
-    private static final int[] fibonacci = new int[]{1, 1, 2, 3, 5, 8, 13};
+    private static final int[] exponentialSequence = new int[]{1, 1, 5, 10, 30};
 
     public static <T> T execute(RetryPolicy<T> policy) {
         int i = 1;
@@ -14,18 +13,25 @@ public class RetryStrategy {
         var isIndefinite = policy.getAttempts() == -1;
 
         while (policy.getSuccess().test(result)) {
-            if (!isIndefinite && i++ >= policy.getAttempts())
-                return result;
-
             try {
-                Thread.sleep(policy.getExponentialBackOff() ? fibonacci[policy.getAttempts()] * 1000 : 1000);
+                Thread.sleep(policy.getExponentialBackOff() ? getExponentialBackOff(i) : 1000);
+
+                if (i++ >= policy.getAttempts() && !isIndefinite)
+                    return result;
 
             } catch (InterruptedException e) {
+                e.printStackTrace();
             }
 
             result = policy.getAction().get();
         }
 
         return result;
+    }
+
+    public static int getExponentialBackOff(int attempts) {
+        return exponentialSequence.length <= attempts
+                ? exponentialSequence[exponentialSequence.length - 1] * 1000
+                : exponentialSequence[attempts] * 1000;
     }
 }
