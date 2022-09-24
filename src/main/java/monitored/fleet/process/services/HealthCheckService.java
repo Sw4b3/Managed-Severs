@@ -23,9 +23,9 @@ public class HealthCheckService implements Runnable {
     private static Logger logger;
 
     public HealthCheckService() {
+        logger =  LoggerFactory.getLogger(this.getClass());
         configuration = new HealthCheckConfiguration();
         httpClient = new HttpClientFactory();
-        logger =  LoggerFactory.getLogger(this.getClass());
     }
 
     @Override

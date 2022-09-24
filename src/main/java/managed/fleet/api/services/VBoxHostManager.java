@@ -2,12 +2,13 @@ package managed.fleet.api.services;
 
 import managed.fleet.api.interfaces.IHostManager;
 import managed.fleet.api.interfaces.IHostService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.virtualbox_6_1.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.logging.Logger;
 
 public class VBoxHostManager implements IHostManager {
     private final IHostService hostService;
@@ -16,8 +17,8 @@ public class VBoxHostManager implements IHostManager {
     private static Logger logger;
 
     public VBoxHostManager() {
+        logger = LoggerFactory.getLogger(this.getClass());
         hostService = new HostService();
-        logger = Logger.getLogger(this.getClass().getName());
 
         connect();
     }
@@ -77,7 +78,7 @@ public class VBoxHostManager implements IHostManager {
                 waitToUnlock(session, machine);
             }
         } else {
-            logger.warning("Host is already running");
+            logger.warn("Host is already running");
         }
     }
 
@@ -175,7 +176,7 @@ public class VBoxHostManager implements IHostManager {
             logger.info("Host Created");
 
         } catch (Exception e) {
-            logger.severe("Failed to create Host::" + e + "");
+            logger.error("Failed to create Host::" + e + "");
         }
     }
 
@@ -210,7 +211,7 @@ public class VBoxHostManager implements IHostManager {
         progress.waitForCompletion(-1);
 
         if (progress.getResultCode() != 0) {
-            logger.warning("Operation failed: " + progress.getErrorInfo().getText());
+            logger.warn("Operation failed: " + progress.getErrorInfo().getText());
         }
     }
 }

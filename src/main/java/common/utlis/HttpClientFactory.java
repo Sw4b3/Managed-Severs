@@ -17,8 +17,8 @@ public class HttpClientFactory {
     private static Logger logger;
 
     public HttpClientFactory() {
+        logger = LoggerFactory.getLogger(this.getClass());
         client = HttpClient.newHttpClient();
-        logger =  LoggerFactory.getLogger(this.getClass());
     }
 
     public HttpResponse GetRequest(String uri) {
@@ -48,9 +48,7 @@ public class HttpClientFactory {
 
         try {
             return client.send(request, HttpResponse.BodyHandlers.ofString());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (InterruptedException e) {
+        } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
