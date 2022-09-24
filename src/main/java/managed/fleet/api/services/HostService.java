@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class HostService implements IHostService {
-    private VirtualBoxManager hostManager;
     private IVirtualBox vbox;
 
     public HostService() {
@@ -17,7 +16,7 @@ public class HostService implements IHostService {
 
     private void connect() {
         try {
-            hostManager = VirtualBoxManager.createInstance(null);
+            var hostManager = VirtualBoxManager.createInstance(null);
 
             hostManager.connect("http://192.168.0.111:18083", null, null);
 

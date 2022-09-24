@@ -7,28 +7,30 @@ import org.virtualbox_6_1.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 public class VBoxHostManager implements IHostManager {
     private final IHostService hostService;
     private VirtualBoxManager hostManager;
     private IVirtualBox vbox;
-    IProgress progress;
+    private static Logger logger;
 
     public VBoxHostManager() {
         hostService = new HostService();
+        logger = Logger.getLogger(this.getClass().getName());
 
         connect();
     }
 
     public void startHost(String machineName) {
-        System.out.println("Starting up Host");
+        logger.info("Starting up Host");
 
         launchMachine(machineName);
     }
 
     @Override
     public void terminateHost(String machineName) {
-        System.out.println("Terminating Host");
+        logger.info("Terminating Host");
 
         shutdownMachine(machineName);
     }
@@ -40,7 +42,7 @@ public class VBoxHostManager implements IHostManager {
 
     @Override
     public void deregisterClient(String machineName) {
-        System.out.println("Unregistering Host");
+        logger.info("Unregistering Host");
 
         deregisteredMachine(machineName);
     }
@@ -53,7 +55,7 @@ public class VBoxHostManager implements IHostManager {
 
             vbox = hostManager.getVBox();
         } catch (Exception e) {
-            System.out.println("Web server is unavailable");
+            logger.info("Web server is unavailable");
         }
     }
 
@@ -62,20 +64,20 @@ public class VBoxHostManager implements IHostManager {
             return;
         }
 
-        IMachine machine = vbox.findMachine(machineName);
+        var machine = vbox.findMachine(machineName);
 
-        ISession session = hostManager.getSessionObject();
+        var session = hostManager.getSessionObject();
 
         if (machine.getSessionState() == SessionState.Unlocked) {
             try {
-                IProgress progress = machine.launchVMProcess(session, "gui", null);
+                var progress = machine.launchVMProcess(session, "gui", null);
 
                 progress.waitForCompletion(1000);
             } finally {
                 waitToUnlock(session, machine);
             }
         } else {
-            System.out.println("Host is already running");
+            logger.warning("Host is already running");
         }
     }
 
@@ -84,18 +86,18 @@ public class VBoxHostManager implements IHostManager {
             return;
         }
 
-        IMachine machine = vbox.findMachine(machineName);
+        var machine = vbox.findMachine(machineName);
 
-        MachineState state = machine.getState();
+        var state = machine.getState();
 
-        ISession session = hostManager.getSessionObject();
+        var session = hostManager.getSessionObject();
 
         machine.lockMachine(session, LockType.Shared);
 
         try {
             if (state.value() >= MachineState.FirstOnline.value() && state.value() <= MachineState.LastOnline.value()) {
 
-                IProgress progress = session.getConsole().powerDown();
+                var progress = session.getConsole().powerDown();
 
                 wait(progress);
             }
@@ -106,7 +108,7 @@ public class VBoxHostManager implements IHostManager {
 
     private void createMachine() {
         try {
-            System.out.println("Creating Host");
+            logger.info("Creating Host");
 
             var hostName = "vm_" + UUID.randomUUID() + "";
 
@@ -116,7 +118,7 @@ public class VBoxHostManager implements IHostManager {
 
             host.getGraphicsAdapter().setVRAMSize(18L);
 
-            System.out.println("Configuring Storage");
+            logger.info("Configuring Storage");
 
             var storageController = host.addStorageController("SATA", StorageBus.SATA);
 
@@ -135,11 +137,10 @@ public class VBoxHostManager implements IHostManager {
 
             progress.waitForCompletion(1000000000);
 
-            if (hddMedium.getState().name().equals("NotCreated")) {
+            if (hddMedium.getState().name().equals("NotCreated"))
                 throw new Exception(progress.getErrorInfo().getText());
-            }
 
-            System.out.println("Configuring Network Adapter");
+            logger.info("Configuring Network Adapter");
 
             var networkAdapter = host.getNetworkAdapter(0L);
 
@@ -151,11 +152,11 @@ public class VBoxHostManager implements IHostManager {
 
             host.saveSettings();
 
-            System.out.println("Registering Host");
+            logger.info("Registering Host");
 
             hostManager.getVBox().registerMachine(host);
 
-            System.out.println("Attaching Storage");
+            logger.info("Attaching Storage");
 
             var session = hostManager.getSessionObject();
 
@@ -171,12 +172,10 @@ public class VBoxHostManager implements IHostManager {
 
             session.unlockMachine();
 
-            System.out.println("Host Created");
+            logger.info("Host Created");
 
         } catch (Exception e) {
-            System.out.println("Failed to create Host:: " + e + "");
-
-            e.printStackTrace();
+            logger.severe("Failed to create Host::" + e + "");
         }
     }
 
@@ -184,7 +183,7 @@ public class VBoxHostManager implements IHostManager {
         if (!hostService.machineExists(machineName))
             return;
 
-        IMachine machine = vbox.findMachine(machineName);
+        var machine = vbox.findMachine(machineName);
 
         machine.unregister(CleanupMode.Full);
     }
@@ -192,29 +191,26 @@ public class VBoxHostManager implements IHostManager {
     private void waitToUnlock(ISession session, IMachine machine) {
         session.unlockMachine();
 
-        SessionState sessionState = machine.getSessionState();
+        var sessionState = machine.getSessionState();
 
         while (!SessionState.Unlocked.equals(sessionState)) {
             sessionState = machine.getSessionState();
 
             try {
-                System.err.println("Waiting for session unlock...[" + sessionState.name() + "][" + machine.getName() + "]");
+                logger.info("Waiting for session unlock::" + sessionState.name() + "::" + machine.getName());
 
                 Thread.sleep(1000L);
             } catch (InterruptedException e) {
-                System.err.println("Interrupted while waiting for session to be unlocked");
+                e.printStackTrace();
             }
         }
     }
 
     private void wait(IProgress progress) {
-        //make this available for the caller
-        this.progress = progress;
-
         progress.waitForCompletion(-1);
 
         if (progress.getResultCode() != 0) {
-            System.err.println("Operation failed: " + progress.getErrorInfo().getText());
+            logger.warning("Operation failed: " + progress.getErrorInfo().getText());
         }
     }
 }

@@ -7,6 +7,8 @@ import common.models.Host;
 import common.models.RetryPolicy;
 import common.utlis.HttpClientFactory;
 import common.utlis.RetryStrategy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.virtualbox_6_1.MachineState;
 
 import java.io.IOException;
@@ -18,11 +20,12 @@ import java.util.List;
 public class HealthCheckService implements Runnable {
     private final HealthCheckConfiguration configuration;
     private final HttpClientFactory httpClient;
-    private boolean cancellationToken = false;
+    private static Logger logger;
 
     public HealthCheckService() {
         configuration = new HealthCheckConfiguration();
         httpClient = new HttpClientFactory();
+        logger =  LoggerFactory.getLogger(this.getClass());
     }
 
     @Override
@@ -32,11 +35,13 @@ public class HealthCheckService implements Runnable {
         var success = RetryStrategy.execute(policy);
 
         if (!success) {
-            System.out.println("Host Manager Server is currently unavailable");
+            logger.warn("Host Manager Server is currently unavailable");
             return;
         }
 
         List<Host> hosts = scanHosts();
+
+        var cancellationToken = false;
 
         while (!cancellationToken) {
             try {
@@ -47,25 +52,25 @@ public class HealthCheckService implements Runnable {
                     host.setState(updateState(host.getName()));
 
                     if (host.getState().equals(MachineState.Running)) {
-                        System.out.println("Checking health for Host::" + host.getName());
+                        logger.info("Checking health for Host::" + host.getName());
 
                         if (host.getIp() == null || host.getIp().equals("0.0.0.0"))
                             host.setIp(getIp(host.getName()));
 
                         var isReachable = pingIp(host.getIp());
 
-                        System.out.println(isReachable ? "Host is reachable" : "Host is not reachable");
+                        logger.info(isReachable ? "Host is reachable" : "Host is not reachable");
 
                         host.setConcurrentFailure(!isReachable ? host.getConcurrentFailure() + 1 : 0);
 
                         if (host.getConcurrentFailure() == configuration.getConcurrentFailureThreshold()) {
-                            System.out.println("Terminating host::" + host.getName());
+                            logger.warn("Terminating host::" + host.getName());
 
                             terminateHost(host.getName());
                         }
                     }
                     if (host.getState().equals(MachineState.PoweredOff)) {
-                        System.out.println("Starting host::" + host.getName());
+                        logger.info("Starting host::" + host.getName());
 
                         startHost(host.getName());
                     }
@@ -74,7 +79,7 @@ public class HealthCheckService implements Runnable {
                 Thread.sleep(configuration.getWait());
 
             } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
+                logger.error(e.toString());
             }
         }
     }
@@ -86,7 +91,7 @@ public class HealthCheckService implements Runnable {
             if (response.statusCode() == 200)
                 return true;
         } catch (Exception e) {
-            System.out.println("Health Check failed::" + uri);
+            logger.error("Health Check failed::" + uri);
         }
 
         return false;
@@ -95,7 +100,7 @@ public class HealthCheckService implements Runnable {
     private boolean pingIp(String ip) throws IOException {
         InetAddress inet = InetAddress.getByName(ip);
 
-        System.out.println("Sending Ping Request to " + ip);
+        logger.info("Sending Ping Request to " + ip);
 
         return inet.isReachable(configuration.getTimeoutThreshold());
     }
@@ -122,18 +127,18 @@ public class HealthCheckService implements Runnable {
         var response = httpClient.PostRequest("http://localhost:8080/hostmanager/start", hostName);
 
         if (response.statusCode() == 200)
-            System.out.println("Host successfully started");
+            logger.info("Host successfully started");
         else
-            System.out.println("Host failed to start");
+            logger.warn("Host failed to start");
     }
 
     private void terminateHost(String hostName) {
         var response = httpClient.PostRequest("http://localhost:8080/hostmanager/terminate", hostName);
 
         if (response.statusCode() == 200)
-            System.out.println("Host successfully terminated");
+            logger.info("Host successfully terminated");
         else
-            System.out.println("Host failed to start");
+            logger.warn("Host failed to start");
     }
 
     private List<Host> scanHosts() {
