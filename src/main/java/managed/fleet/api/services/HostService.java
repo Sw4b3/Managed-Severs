@@ -11,11 +11,9 @@ import java.util.List;
 
 public class HostService implements IHostService {
     private IVirtualBox vbox;
-    private static Logger logger;
+    private static Logger logger = LoggerFactory.getLogger(HostService.class);
 
     public HostService() {
-        logger = LoggerFactory.getLogger(this.getClass());
-
         connect();
     }
 
