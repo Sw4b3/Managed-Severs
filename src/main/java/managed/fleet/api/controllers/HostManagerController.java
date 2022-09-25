@@ -1,7 +1,8 @@
 package managed.fleet.api.controllers;
 
 import managed.fleet.api.interfaces.IHostManager;
-import managed.fleet.api.services.VBoxHostManager;
+import managed.fleet.api.models.HostConfiguration;
+import managed.fleet.api.services.VBoxHostManagerService;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -10,26 +11,26 @@ public class HostManagerController {
 
     private final IHostManager manager;
 
-    public  HostManagerController(){
-        this.manager = new VBoxHostManager();
+    public HostManagerController() {
+        this.manager = new VBoxHostManagerService();
     }
 
-    @GetMapping(path = "/create", produces = "application/json")
-    public String CreateHost() {
-        manager.registerClient();
+    @PostMapping(path = "/create", produces = "application/json")
+    public String CreateHost(@RequestBody HostConfiguration hostConfiguration) {
+        manager.registerClient(hostConfiguration);
 
         return "Ok";
     }
 
     @GetMapping(path = "/delete", produces = "application/json")
-    public String DeleteHost(@RequestParam String hostName)  {
+    public String DeleteHost(@RequestParam String hostName) {
         manager.deregisterClient(hostName);
 
         return "Ok";
     }
 
-    @PostMapping(path = "/start", produces = "application/json")
-    public String StartHost(@RequestBody String hostName) {
+    @GetMapping(path = "/start", produces = "application/json")
+    public String StartHost(@RequestParam String hostName) {
         manager.startHost(hostName);
 
         return "Ok";

@@ -10,7 +10,7 @@ public interface IHostService {
 
     MachineState GetHostState(String machineName);
 
-    String getMachineIPv4(String machineName);
+    String getHostIPv4(String machineName);
 
-    boolean machineExists(String machineName);
+    boolean hostExists(String machineName);
 }

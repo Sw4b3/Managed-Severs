@@ -2,72 +2,65 @@ package managed.fleet.api.services;
 
 import managed.fleet.api.interfaces.IHostManager;
 import managed.fleet.api.interfaces.IHostService;
+import managed.fleet.api.interfaces.IWebserverSession;
+import managed.fleet.api.models.HostConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.virtualbox_6_1.*;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class VBoxHostManager implements IHostManager {
+public class VBoxHostManagerService implements IHostManager {
     private final IHostService hostService;
-    private VirtualBoxManager hostManager;
-    private IVirtualBox vbox;
+    private final IWebserverSession webserverSession;
     private static Logger logger;
 
-    public VBoxHostManager() {
+    public VBoxHostManagerService() {
         logger = LoggerFactory.getLogger(this.getClass());
-        hostService = new HostService();
-
-        connect();
+        hostService = new VboxHostService();
+        webserverSession = new VboxWebserverSession();
     }
 
+    @Override
     public void startHost(String machineName) {
         logger.info("Starting up Host");
 
-        launchMachine(machineName);
+        webserverSession.execute(() -> launchMachine(machineName));
     }
 
     @Override
     public void terminateHost(String machineName) {
         logger.info("Terminating Host");
 
-        shutdownMachine(machineName);
+        webserverSession.execute(() -> shutdownMachine(machineName));
     }
 
     @Override
-    public void registerClient() {
-        createMachine();
+    public void registerClient(HostConfiguration hostConfiguration) {
+        logger.info("Creating Host");
+
+        webserverSession.execute(() -> createMachine(hostConfiguration));
     }
 
     @Override
     public void deregisterClient(String machineName) {
         logger.info("Unregistering Host");
 
-        deregisteredMachine(machineName);
-    }
-
-    private void connect() {
-        try {
-            hostManager = VirtualBoxManager.createInstance(null);
-
-            hostManager.connect("http://192.168.0.111:18083", null, null);
-
-            vbox = hostManager.getVBox();
-        } catch (Exception e) {
-            logger.info("Web server is unavailable");
-        }
+        webserverSession.execute(() -> deregisteredMachine(machineName));
     }
 
     private void launchMachine(String machineName) {
-        if (!hostService.machineExists(machineName)) {
+        var vbox = webserverSession.getVbox();
+
+        if (!hostService.hostExists(machineName))
             return;
-        }
 
         var machine = vbox.findMachine(machineName);
 
-        var session = hostManager.getSessionObject();
+        var session = webserverSession.getSession();
 
         if (machine.getSessionState() == SessionState.Unlocked) {
             try {
@@ -83,15 +76,16 @@ public class VBoxHostManager implements IHostManager {
     }
 
     private void shutdownMachine(String machineName) {
-        if (!hostService.machineExists(machineName)) {
+        var vbox = webserverSession.getVbox();
+
+        if (!hostService.hostExists(machineName))
             return;
-        }
 
         var machine = vbox.findMachine(machineName);
 
         var state = machine.getState();
 
-        var session = hostManager.getSessionObject();
+        var session = webserverSession.getSession();
 
         machine.lockMachine(session, LockType.Shared);
 
@@ -107,15 +101,17 @@ public class VBoxHostManager implements IHostManager {
         }
     }
 
-    private void createMachine() {
-        try {
-            logger.info("Creating Host");
+    private void createMachine(HostConfiguration hostConfiguration) {
+        var vbox = webserverSession.getVbox();
 
+        scanMachineImages();
+
+        try {
             var hostName = "vm_" + UUID.randomUUID() + "";
 
             var host = vbox.createMachine(null, hostName, null, "Other_64", null);
 
-            host.setMemorySize(2048L);
+            host.setMemorySize(hostConfiguration.getMemoryConfiguration());
 
             host.getGraphicsAdapter().setVRAMSize(18L);
 
@@ -125,16 +121,16 @@ public class VBoxHostManager implements IHostManager {
 
             storageController.setPortCount(2L);
 
-            var hddMedium = vbox.createMedium("vdi", "D:/VirtualBox VMs/vm/", AccessMode.ReadWrite, DeviceType.HardDisk);
+            var imagesMedium = getMachineImageMedium(vbox.getDVDImages(), hostConfiguration.getOSImage());
 
-            var imagesMedium = vbox.getDVDImages();
+            var hddMedium = vbox.createMedium("vdi", "D:/VirtualBox VMs/vm/", AccessMode.ReadWrite, DeviceType.HardDisk);
 
             List<MediumVariant> hddMediumVariants = new ArrayList<>();
 
             hddMediumVariants.add(MediumVariant.Fixed);
             hddMediumVariants.add(MediumVariant.VdiZeroExpand);
 
-            var progress = hddMedium.createBaseStorage(20737418240L, hddMediumVariants);
+            var progress = hddMedium.createBaseStorage(hostConfiguration.getStorageCapacity(), hddMediumVariants);
 
             progress.waitForCompletion(1000000000);
 
@@ -155,11 +151,11 @@ public class VBoxHostManager implements IHostManager {
 
             logger.info("Registering Host");
 
-            hostManager.getVBox().registerMachine(host);
+            vbox.registerMachine(host);
 
             logger.info("Attaching Storage");
 
-            var session = hostManager.getSessionObject();
+            var session = webserverSession.getSession();
 
             host.lockMachine(session, LockType.Shared);
 
@@ -167,7 +163,7 @@ public class VBoxHostManager implements IHostManager {
 
             host.attachDevice("SATA", 0, 0, DeviceType.HardDisk, hddMedium);
 
-            host.attachDevice("SATA", 1, 0, DeviceType.DVD, imagesMedium.get(1));
+            host.attachDevice("SATA", 1, 0, DeviceType.DVD, imagesMedium);
 
             host.saveSettings();
 
@@ -176,12 +172,15 @@ public class VBoxHostManager implements IHostManager {
             logger.info("Host Created");
 
         } catch (Exception e) {
-            logger.error("Failed to create Host::" + e + "");
+            logger.error("Failed to create Host::" + e);
+            e.printStackTrace();
         }
     }
 
     private void deregisteredMachine(String machineName) {
-        if (!hostService.machineExists(machineName))
+        var vbox = webserverSession.getVbox();
+
+        if (!hostService.hostExists(machineName))
             return;
 
         var machine = vbox.findMachine(machineName);
@@ -213,5 +212,35 @@ public class VBoxHostManager implements IHostManager {
         if (progress.getResultCode() != 0) {
             logger.warn("Operation failed: " + progress.getErrorInfo().getText());
         }
+    }
+
+    private void scanMachineImages() {
+        var path = "D:/Machine Images/";
+
+        File directoryPath = new File(path);
+
+        var contents = directoryPath.list();
+
+        for (int i = 0; i < (contents != null ? contents.length : 0); i++) {
+            if (contents[i].toLowerCase().contains(".iso"))
+                addMachineImage(path + contents[i]);
+        }
+    }
+
+    private void addMachineImage(String path) {
+        var vbox = webserverSession.getVbox();
+
+        logger.info("Adding machine image::" + path);
+
+        vbox.openMedium(path, DeviceType.DVD, AccessMode.ReadOnly, true);
+    }
+
+    private IMedium getMachineImageMedium(List<IMedium> images, String desiredImage) {
+        for (var image : images) {
+            if (image.getName().equals(desiredImage))
+                return image;
+        }
+
+        throw new IllegalArgumentException();
     }
 }
