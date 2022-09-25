@@ -26,52 +26,36 @@ public class VBoxHostManagerService implements IHostManager {
 
     @Override
     public void startHost(String machineName) {
-        webserverSession.connect();
-
         logger.info("Starting up Host");
 
-        launchMachine(machineName);
-
-        webserverSession.disconnect();
+        webserverSession.execute(() -> launchMachine(machineName));
     }
 
     @Override
     public void terminateHost(String machineName) {
-        webserverSession.connect();
-
         logger.info("Terminating Host");
 
-        shutdownMachine(machineName);
-
-        webserverSession.disconnect();
+        webserverSession.execute(() -> shutdownMachine(machineName));
     }
 
     @Override
     public void registerClient(HostConfiguration hostConfiguration) {
-        webserverSession.connect();
-
         logger.info("Creating Host");
 
-        createMachine(hostConfiguration);
-
-        webserverSession.disconnect();
+        webserverSession.execute(() -> createMachine(hostConfiguration));
     }
 
     @Override
     public void deregisterClient(String machineName) {
-        webserverSession.connect();
-
         logger.info("Unregistering Host");
 
-        deregisteredMachine(machineName);
-
-        webserverSession.disconnect();
+        webserverSession.execute(() -> deregisteredMachine(machineName));
     }
 
     private void launchMachine(String machineName) {
         var vbox = webserverSession.getVbox();
 
-        if (!hostService.machineExists(machineName))
+        if (!hostService.hostExists(machineName))
             return;
 
         var machine = vbox.findMachine(machineName);
@@ -94,7 +78,7 @@ public class VBoxHostManagerService implements IHostManager {
     private void shutdownMachine(String machineName) {
         var vbox = webserverSession.getVbox();
 
-        if (!hostService.machineExists(machineName))
+        if (!hostService.hostExists(machineName))
             return;
 
         var machine = vbox.findMachine(machineName);
@@ -196,7 +180,7 @@ public class VBoxHostManagerService implements IHostManager {
     private void deregisteredMachine(String machineName) {
         var vbox = webserverSession.getVbox();
 
-        if (!hostService.machineExists(machineName))
+        if (!hostService.hostExists(machineName))
             return;
 
         var machine = vbox.findMachine(machineName);

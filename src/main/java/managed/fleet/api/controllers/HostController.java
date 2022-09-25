@@ -32,6 +32,6 @@ public class HostController {
 
     @GetMapping(path = "/GetIp", produces = "application/json")
     public String GetHostIp(@RequestParam String hostName) {
-        return manager.getMachineIPv4(hostName);
+        return manager.getHostIPv4(hostName);
     }
 }

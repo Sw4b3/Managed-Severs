@@ -11,29 +11,38 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class VboxHostService implements IHostService {
-    private IVirtualBox vbox;
-    private final VirtualBoxManager hostManager;
     private final IWebserverSession webserverSession;
     private static Logger logger = LoggerFactory.getLogger(VboxHostService.class);
 
     public VboxHostService() {
-        hostManager = VirtualBoxManager.createInstance(null);
         webserverSession = new VboxWebserverSession();
     }
 
     public List<Host> scanHosts() {
-        webserverSession.connect();
+        return webserverSession.execute(() -> scanMachine());
+    }
 
-        vbox = hostManager.getVBox();
+    public MachineState GetHostState(String machineName) {
+        return webserverSession.execute(() -> GetMachineState(machineName));
+    }
 
+    public String getHostIPv4(String machineName) {
+        return webserverSession.execute(() -> getMachineIPv4(machineName));
+    }
+
+    public boolean hostExists(String machineName) {
+        return webserverSession.execute(() -> machineExists(machineName));
+    }
+
+    private List<Host> scanMachine() {
         try {
             var hosts = new ArrayList<Host>();
 
-            for (IMachine machine : vbox.getMachines()) {
+            for (IMachine machine : webserverSession.getVbox().getMachines()) {
 
                 var host = new Host(
                         machine.getName(),
-                        getMachineIPv4(machine.getName()),
+                        getHostIPv4(machine.getName()),
                         machine.getNetworkAdapter(0L).getMACAddress(),
                         machine.getState()
                 );
@@ -49,51 +58,32 @@ public class VboxHostService implements IHostService {
         return null;
     }
 
-    public MachineState GetHostState(String machineName) {
-        webserverSession.connect();
-
-        vbox = hostManager.getVBox();
-
-        var machineState = vbox.findMachine(machineName).getState();
-
-        webserverSession.disconnect();
-
-        return machineState;
-    }
-
-    public String getMachineIPv4(String machineName) {
-        webserverSession.connect();
-
-        vbox = hostManager.getVBox();
-
-        if (!machineExists(machineName))
+    public MachineState GetMachineState(String machineName) {
+        if (!hostExists(machineName))
             return null;
 
-        var machine = vbox.findMachine(machineName);
+        return webserverSession.getVbox().findMachine(machineName).getState();
+    }
 
-        var ip = machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/0/V4/IP");
+    private String getMachineIPv4(String machineName) {
+        if (!hostExists(machineName))
+            return null;
 
-        webserverSession.disconnect();
+        var ip = webserverSession.getVbox().findMachine(machineName).getGuestPropertyValue("/VirtualBox/GuestInfo/Net/0/V4/IP");
 
         return !ip.equals("") ? ip : "0.0.0.0";
     }
 
-    public boolean machineExists(String machineName) {
-        webserverSession.connect();
-
-        vbox = hostManager.getVBox();
-
+    private boolean machineExists(String machineName) {
         if (machineName == null)
             return false;
 
-        List<IMachine> machines = vbox.getMachines();
+        List<IMachine> machines = webserverSession.getVbox().getMachines();
 
         for (IMachine machine : machines) {
             if (machine.getName().equals(machineName))
                 return true;
         }
-
-        webserverSession.disconnect();
 
         return false;
     }

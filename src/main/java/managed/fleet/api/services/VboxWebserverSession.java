@@ -7,6 +7,9 @@ import org.virtualbox_6_1.ISession;
 import org.virtualbox_6_1.IVirtualBox;
 import org.virtualbox_6_1.VirtualBoxManager;
 
+import java.util.List;
+import java.util.function.Supplier;
+
 public class VboxWebserverSession implements IWebserverSession {
     private static Logger logger;
     private VirtualBoxManager hostManager;
@@ -30,9 +33,26 @@ public class VboxWebserverSession implements IWebserverSession {
         }
     }
 
+    public <T> T execute(Supplier<T> Action) {
+        try {
+            connect();
+
+            return Action.get();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            disconnect();
+        }
+
+        return null;
+    }
+
     @Override
     public void connect() {
         try {
+            logger.info("Connecting to Web severs");
+
             hostManager.connect("http://192.168.0.111:18083", null, null);
         } catch (Exception e) {
             logger.error("Web server is unavailable");
