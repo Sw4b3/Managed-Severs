@@ -1,11 +1,16 @@
 package managed.fleet.api.interfaces;
 
-import org.virtualbox_6_1.VirtualBoxManager;
+import org.virtualbox_6_1.ISession;
+import org.virtualbox_6_1.IVirtualBox;
 
 public interface IWebserverSession {
-    void execute(Runnable Action, VirtualBoxManager hostManager);
+    void execute(Runnable Action);
 
-    void connect(VirtualBoxManager hostManager);
+    void connect();
 
-    void disconnect(VirtualBoxManager hostManager);
+    void disconnect();
+
+    ISession getSession();
+
+    IVirtualBox getVbox();
 }

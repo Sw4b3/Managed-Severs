@@ -16,70 +16,67 @@ import java.util.UUID;
 public class VBoxHostManagerService implements IHostManager {
     private final IHostService hostService;
     private final IWebserverSession webserverSession;
-    private VirtualBoxManager hostManager;
-    private static IVirtualBox vbox;
     private static Logger logger;
 
     public VBoxHostManagerService() {
         logger = LoggerFactory.getLogger(this.getClass());
         hostService = new VboxHostService();
         webserverSession = new VboxWebserverSession();
-        hostManager = VirtualBoxManager.createInstance(null);
     }
 
     @Override
     public void startHost(String machineName) {
-        webserverSession.connect(hostManager);
+        webserverSession.connect();
 
         logger.info("Starting up Host");
 
         launchMachine(machineName);
 
-        webserverSession.disconnect(hostManager);
+        webserverSession.disconnect();
     }
 
     @Override
     public void terminateHost(String machineName) {
-        webserverSession.connect(hostManager);
+        webserverSession.connect();
 
         logger.info("Terminating Host");
 
         shutdownMachine(machineName);
 
-        webserverSession.disconnect(hostManager);
+        webserverSession.disconnect();
     }
 
     @Override
     public void registerClient(HostConfiguration hostConfiguration) {
-        webserverSession.connect(hostManager);
+        webserverSession.connect();
 
         logger.info("Creating Host");
 
         createMachine(hostConfiguration);
 
-        webserverSession.disconnect(hostManager);
+        webserverSession.disconnect();
     }
 
     @Override
     public void deregisterClient(String machineName) {
-        webserverSession.connect(hostManager);
+        webserverSession.connect();
 
         logger.info("Unregistering Host");
 
         deregisteredMachine(machineName);
 
-        webserverSession.disconnect(hostManager);
+        webserverSession.disconnect();
     }
 
     private void launchMachine(String machineName) {
-        vbox = hostManager.getVBox();
+        var vbox = webserverSession.getVbox();
 
         if (!hostService.machineExists(machineName))
             return;
 
         var machine = vbox.findMachine(machineName);
 
-        var session = hostManager.getSessionObject();
+        var session = webserverSession.getSession();
 
         if (machine.getSessionState() == SessionState.Unlocked) {
             try {
@@ -95,7 +92,7 @@ public class VBoxHostManagerService implements IHostManager {
     }
 
     private void shutdownMachine(String machineName) {
-        vbox = hostManager.getVBox();
+        var vbox = webserverSession.getVbox();
 
         if (!hostService.machineExists(machineName))
             return;
@@ -104,7 +101,7 @@ public class VBoxHostManagerService implements IHostManager {
 
         var state = machine.getState();
 
-        var session = hostManager.getSessionObject();
+        var session = webserverSession.getSession();
 
         machine.lockMachine(session, LockType.Shared);
 
@@ -121,7 +118,7 @@ public class VBoxHostManagerService implements IHostManager {
     }
 
     private void createMachine(HostConfiguration hostConfiguration) {
-        vbox = hostManager.getVBox();
+        var vbox = webserverSession.getVbox();
 
         scanMachineImages();
 
@@ -170,11 +167,11 @@ public class VBoxHostManagerService implements IHostManager {
 
             logger.info("Registering Host");
 
-            hostManager.getVBox().registerMachine(host);
+            vbox.registerMachine(host);
 
             logger.info("Attaching Storage");
 
-            var session = hostManager.getSessionObject();
+            var session = webserverSession.getSession();
 
             host.lockMachine(session, LockType.Shared);
 
@@ -197,7 +194,7 @@ public class VBoxHostManagerService implements IHostManager {
     }
 
     private void deregisteredMachine(String machineName) {
-        vbox = hostManager.getVBox();
+        var vbox = webserverSession.getVbox();
 
         if (!hostService.machineExists(machineName))
             return;
@@ -247,6 +244,8 @@ public class VBoxHostManagerService implements IHostManager {
     }
 
     private void addMachineImage(String path) {
+        var vbox = webserverSession.getVbox();
+
         logger.info("Adding machine image::" + path);
 
         vbox.openMedium(path, DeviceType.DVD, AccessMode.ReadOnly, true);

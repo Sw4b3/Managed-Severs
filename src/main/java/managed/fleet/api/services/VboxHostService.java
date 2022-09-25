@@ -22,7 +22,7 @@ public class VboxHostService implements IHostService {
     }
 
     public List<Host> scanHosts() {
-        webserverSession.connect(hostManager);
+        webserverSession.connect();
 
         vbox = hostManager.getVBox();
 
@@ -50,19 +50,19 @@ public class VboxHostService implements IHostService {
     }
 
     public MachineState GetHostState(String machineName) {
-        webserverSession.connect(hostManager);
+        webserverSession.connect();
 
         vbox = hostManager.getVBox();
 
         var machineState = vbox.findMachine(machineName).getState();
 
-        webserverSession.disconnect(hostManager);
+        webserverSession.disconnect();
 
         return machineState;
     }
 
     public String getMachineIPv4(String machineName) {
-        webserverSession.connect(hostManager);
+        webserverSession.connect();
 
         vbox = hostManager.getVBox();
 
@@ -73,13 +73,13 @@ public class VboxHostService implements IHostService {
 
         var ip = machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/0/V4/IP");
 
-        webserverSession.disconnect(hostManager);
+        webserverSession.disconnect();
 
         return !ip.equals("") ? ip : "0.0.0.0";
     }
 
     public boolean machineExists(String machineName) {
-        webserverSession.connect(hostManager);
+        webserverSession.connect();
 
         vbox = hostManager.getVBox();
 
@@ -93,7 +93,7 @@ public class VboxHostService implements IHostService {
                 return true;
         }
 
-        webserverSession.disconnect(hostManager);
+        webserverSession.disconnect();
 
         return false;
     }
