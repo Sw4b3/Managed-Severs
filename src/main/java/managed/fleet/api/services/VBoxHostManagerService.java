@@ -121,9 +121,9 @@ public class VBoxHostManagerService implements IHostManager {
 
             storageController.setPortCount(2L);
 
-            var hddMedium = vbox.createMedium("vdi", "D:/VirtualBox VMs/vm/", AccessMode.ReadWrite, DeviceType.HardDisk);
-
             var imagesMedium = getMachineImageMedium(vbox.getDVDImages(), hostConfiguration.getOSImage());
+
+            var hddMedium = vbox.createMedium("vdi", "D:/VirtualBox VMs/vm/", AccessMode.ReadWrite, DeviceType.HardDisk);
 
             List<MediumVariant> hddMediumVariants = new ArrayList<>();
 
