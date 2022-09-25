@@ -59,14 +59,14 @@ public class VboxHostService implements IHostService {
     }
 
     public MachineState GetMachineState(String machineName) {
-        if (!hostExists(machineName))
+        if (!machineExists(machineName))
             return null;
 
         return webserverSession.getVbox().findMachine(machineName).getState();
     }
 
     private String getMachineIPv4(String machineName) {
-        if (!hostExists(machineName))
+        if (!machineExists(machineName))
             return null;
 
         var ip = webserverSession.getVbox().findMachine(machineName).getGuestPropertyValue("/VirtualBox/GuestInfo/Net/0/V4/IP");

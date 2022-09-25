@@ -49,7 +49,16 @@ public class VboxWebserverSession implements IWebserverSession {
     }
 
     @Override
-    public void connect() {
+    public ISession getSession() {
+        return hostManager.getSessionObject();
+    }
+
+    @Override
+    public IVirtualBox getVbox() {
+        return hostManager.getVBox();
+    }
+
+    private void connect() {
         try {
             logger.info("Connecting to Web severs");
 
@@ -59,20 +68,9 @@ public class VboxWebserverSession implements IWebserverSession {
         }
     }
 
-    @Override
-    public void disconnect() {
+    private void disconnect() {
         logger.info("Disconnecting from Web severs");
 
         hostManager.disconnect();
-    }
-
-    @Override
-    public ISession getSession() {
-        return hostManager.getSessionObject();
-    }
-
-    @Override
-    public IVirtualBox getVbox() {
-        return hostManager.getVBox();
     }
 }

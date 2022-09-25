@@ -7,11 +7,8 @@ import java.util.function.Supplier;
 
 public interface IWebserverSession {
     void execute(Runnable Action);
-    <T> T execute  (Supplier<T> Action);
 
-    void connect();
-
-    void disconnect();
+    <TResponse> TResponse execute(Supplier<TResponse> Action);
 
     ISession getSession();
 
