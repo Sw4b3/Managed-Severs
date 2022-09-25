@@ -2,6 +2,7 @@ package managed.fleet.api.services;
 
 import common.models.Host;
 import managed.fleet.api.interfaces.IHostService;
+import managed.fleet.api.interfaces.IWebserverSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.virtualbox_6_1.*;
@@ -9,27 +10,22 @@ import org.virtualbox_6_1.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class HostService implements IHostService {
+public class VboxHostService implements IHostService {
     private IVirtualBox vbox;
-    private static Logger logger = LoggerFactory.getLogger(HostService.class);
+    private final VirtualBoxManager hostManager;
+    private final IWebserverSession webserverSession;
+    private static Logger logger = LoggerFactory.getLogger(VboxHostService.class);
 
-    public HostService() {
-        connect();
-    }
-
-    private void connect() {
-        try {
-            var hostManager = VirtualBoxManager.createInstance(null);
-
-            hostManager.connect("http://192.168.0.111:18083", null, null);
-
-            vbox = hostManager.getVBox();
-        } catch (Exception e) {
-            logger.error("Web server is unavailable");
-        }
+    public VboxHostService() {
+        hostManager = VirtualBoxManager.createInstance(null);
+        webserverSession = new VboxWebserverSession();
     }
 
     public List<Host> scanHosts() {
+        webserverSession.connect(hostManager);
+
+        vbox = hostManager.getVBox();
+
         try {
             var hosts = new ArrayList<Host>();
 
@@ -54,10 +50,22 @@ public class HostService implements IHostService {
     }
 
     public MachineState GetHostState(String machineName) {
-        return vbox.findMachine(machineName).getState();
+        webserverSession.connect(hostManager);
+
+        vbox = hostManager.getVBox();
+
+        var machineState = vbox.findMachine(machineName).getState();
+
+        webserverSession.disconnect(hostManager);
+
+        return machineState;
     }
 
     public String getMachineIPv4(String machineName) {
+        webserverSession.connect(hostManager);
+
+        vbox = hostManager.getVBox();
+
         if (!machineExists(machineName))
             return null;
 
@@ -65,10 +73,16 @@ public class HostService implements IHostService {
 
         var ip = machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/0/V4/IP");
 
+        webserverSession.disconnect(hostManager);
+
         return !ip.equals("") ? ip : "0.0.0.0";
     }
 
     public boolean machineExists(String machineName) {
+        webserverSession.connect(hostManager);
+
+        vbox = hostManager.getVBox();
+
         if (machineName == null)
             return false;
 
@@ -78,6 +92,8 @@ public class HostService implements IHostService {
             if (machine.getName().equals(machineName))
                 return true;
         }
+
+        webserverSession.disconnect(hostManager);
 
         return false;
     }

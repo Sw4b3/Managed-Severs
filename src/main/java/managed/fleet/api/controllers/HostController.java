@@ -2,7 +2,7 @@ package managed.fleet.api.controllers;
 
 import common.models.Host;
 import managed.fleet.api.interfaces.IHostService;
-import managed.fleet.api.services.HostService;
+import managed.fleet.api.services.VboxHostService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,7 +17,7 @@ public class HostController {
     private final IHostService manager;
 
     public HostController() {
-        this.manager = new HostService();
+        this.manager = new VboxHostService();
     }
 
     @GetMapping(path = "/GetHosts", produces = "application/json")
