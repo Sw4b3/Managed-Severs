@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Windows Server",
+    "osType": "Windows",
+    "imageName": "Windows_Server_2016_Datacenter_EVAL_en-us_14393_refresh.ISO"
+  },
+  {
+    "name": "Ubuntu",
+    "osType": "Ubuntu",
+    "imageName": "ubuntu-22.04.1-desktop-amd64.iso"
+  },
+  {
+    "name": "Mac",
+    "osType": "MacOS",
+    "imageName": "macOS Mojave 10.14.iso"
+  }
+]

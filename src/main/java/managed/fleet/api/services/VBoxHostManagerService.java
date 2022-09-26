@@ -2,6 +2,7 @@ package managed.fleet.api.services;
 
 import managed.fleet.api.interfaces.IHostManager;
 import managed.fleet.api.interfaces.IHostService;
+import managed.fleet.api.interfaces.IInstanceConfigurationManager;
 import managed.fleet.api.interfaces.IWebserverSession;
 import managed.fleet.api.models.HostConfiguration;
 import org.slf4j.Logger;
@@ -15,12 +16,14 @@ import java.util.UUID;
 
 public class VBoxHostManagerService implements IHostManager {
     private final IHostService hostService;
+    private final IInstanceConfigurationManager instanceManagerService;
     private final IWebserverSession webserverSession;
     private static Logger logger;
 
     public VBoxHostManagerService() {
         logger = LoggerFactory.getLogger(this.getClass());
         hostService = new VboxHostService();
+        instanceManagerService = new InstanceConfigurationManager();
         webserverSession = new VboxWebserverSession();
     }
 
@@ -107,13 +110,17 @@ public class VBoxHostManagerService implements IHostManager {
         scanMachineImages();
 
         try {
+            var instanceConfiguration = instanceManagerService.getInstanceConfiguration(hostConfiguration);
+
             var hostName = "vm_" + UUID.randomUUID() + "";
 
             var host = vbox.createMachine(null, hostName, null, "Other_64", null);
 
-            host.setMemorySize(hostConfiguration.getMemoryConfiguration());
+            host.setMemorySize(instanceConfiguration.getMemoryConfiguration());
 
             host.getGraphicsAdapter().setVRAMSize(18L);
+
+            host.setCPUCount((long) instanceConfiguration.getCpuCount());
 
             logger.info("Configuring Storage");
 
@@ -121,7 +128,7 @@ public class VBoxHostManagerService implements IHostManager {
 
             storageController.setPortCount(2L);
 
-            var imagesMedium = getMachineImageMedium(vbox.getDVDImages(), hostConfiguration.getOSImage());
+            var imagesMedium = getMachineImageMedium(vbox.getDVDImages(), instanceConfiguration.getOSImage());
 
             var hddMedium = vbox.createMedium("vdi", "D:/VirtualBox VMs/vm/", AccessMode.ReadWrite, DeviceType.HardDisk);
 
@@ -130,7 +137,7 @@ public class VBoxHostManagerService implements IHostManager {
             hddMediumVariants.add(MediumVariant.Fixed);
             hddMediumVariants.add(MediumVariant.VdiZeroExpand);
 
-            var progress = hddMedium.createBaseStorage(hostConfiguration.getStorageCapacity(), hddMediumVariants);
+            var progress = hddMedium.createBaseStorage(instanceConfiguration.getStorageCapacity(), hddMediumVariants);
 
             progress.waitForCompletion(1000000000);
 
@@ -170,6 +177,8 @@ public class VBoxHostManagerService implements IHostManager {
             session.unlockMachine();
 
             logger.info("Host Created");
+
+            launchMachine(hostName);
 
         } catch (Exception e) {
             logger.error("Failed to create Host::" + e);
