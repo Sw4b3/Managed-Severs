@@ -1,4 +1,4 @@
-package common.models;
+package monitored.fleet.process.models;
 
 //TODO: to be move to web.xml
 public class HealthCheckConfiguration {

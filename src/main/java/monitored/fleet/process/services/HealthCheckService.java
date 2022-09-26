@@ -2,7 +2,7 @@ package monitored.fleet.process.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import common.models.HealthCheckConfiguration;
+import monitored.fleet.process.models.HealthCheckConfiguration;
 import common.models.Host;
 import common.models.RetryPolicy;
 import common.utlis.HttpClientFactory;

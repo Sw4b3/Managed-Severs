@@ -1,0 +1,22 @@
+[
+  {
+    "name": "M.1",
+    "cpuCount": 1,
+    "memoryConfiguration": 2
+  },
+  {
+    "name": "M.2",
+    "cpuCount": 1,
+    "memoryConfiguration": 4
+  },
+  {
+    "name": "C.1",
+    "cpuCount": 1,
+    "memoryConfiguration": 2
+  },
+  {
+    "name": "C.2",
+    "cpuCount": 2,
+    "memoryConfiguration": 4
+  }
+]
