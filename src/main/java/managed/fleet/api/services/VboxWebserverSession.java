@@ -1,6 +1,7 @@
 package managed.fleet.api.services;
 
 import common.models.RetryPolicy;
+import common.utlis.ConfigurationManger;
 import common.utlis.RetryStrategy;
 import managed.fleet.api.interfaces.IWebserverSession;
 import org.slf4j.Logger;
@@ -14,7 +15,7 @@ import java.util.function.Supplier;
 
 public class VboxWebserverSession implements IWebserverSession {
     private static Logger logger;
-    private VirtualBoxManager hostManager;
+    private final VirtualBoxManager hostManager;
 
     public VboxWebserverSession() {
         logger = LoggerFactory.getLogger(this.getClass());
@@ -69,7 +70,7 @@ public class VboxWebserverSession implements IWebserverSession {
         try {
             logger.info("Connecting to Web severs");
 
-            hostManager.connect("http://192.168.0.111:18083", null, null);
+            hostManager.connect(ConfigurationManger.getSection("Url:VirtualBoxWebServer").toString(), null, null);
 
             logger.info("Connected to Web severs");
 
