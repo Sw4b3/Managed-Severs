@@ -2,6 +2,7 @@ package monitored.fleet.process.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import common.utlis.ConfigurationManger;
 import monitored.fleet.process.models.HealthCheckConfiguration;
 import common.models.Host;
 import common.models.RetryPolicy;
@@ -23,14 +24,14 @@ public class HealthCheckService implements Runnable {
     private static Logger logger;
 
     public HealthCheckService() {
-        logger =  LoggerFactory.getLogger(this.getClass());
+        logger = LoggerFactory.getLogger(this.getClass());
         configuration = new HealthCheckConfiguration();
         httpClient = new HttpClientFactory();
     }
 
     @Override
     public void run() {
-        var policy = new RetryPolicy<>(() -> checkHealth("http://localhost:8080/health/"), r -> true, 3, true);
+        var policy = new RetryPolicy<>(() -> checkHealth(ConfigurationManger.getSection("Url:FleetApi") + "/health"), r -> true, 3, true);
 
         var success = RetryStrategy.execute(policy);
 
@@ -106,7 +107,7 @@ public class HealthCheckService implements Runnable {
     }
 
     private String getIp(String hostName) {
-        var response = httpClient.GetRequest("http://localhost:8080/Host/GetIp?hostName=" + hostName);
+        var response = httpClient.GetRequest(ConfigurationManger.getSection("Url:FleetApi") + "/Host/GetIp?hostName=" + hostName);
 
         return response.body().toString();
     }
@@ -115,7 +116,7 @@ public class HealthCheckService implements Runnable {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
 
-            var response = httpClient.GetRequest("http://localhost:8080/Host/GetState?hostName=" + hostName);
+            var response = httpClient.GetRequest(ConfigurationManger.getSection("Url:FleetApi") + "/Host/GetState?hostName=" + hostName);
 
             return objectMapper.readValue(response.body().toString(), MachineState.class);
         } catch (JsonProcessingException e) {
@@ -124,7 +125,7 @@ public class HealthCheckService implements Runnable {
     }
 
     private void startHost(String hostName) {
-        var response = httpClient.PostRequest("http://localhost:8080/hostmanager/start", hostName);
+        var response = httpClient.PostRequest(ConfigurationManger.getSection("Url:FleetApi")+"/hostmanager/start", hostName);
 
         if (response.statusCode() == 200)
             logger.info("Host successfully started");
@@ -147,7 +148,7 @@ public class HealthCheckService implements Runnable {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
 
-            var response = httpClient.GetRequest("http://localhost:8080/Host/GetHosts");
+            var response = httpClient.GetRequest(ConfigurationManger.getSection("Url:FleetApi")+"/Host/GetHosts");
 
             Host[] hostsArr = objectMapper.readValue(response.body().toString(), Host[].class);
 

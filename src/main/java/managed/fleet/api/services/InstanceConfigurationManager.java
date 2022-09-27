@@ -1,6 +1,7 @@
 package managed.fleet.api.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import common.utlis.ConfigurationManger;
 import managed.fleet.api.interfaces.IInstanceConfigurationManager;
 import managed.fleet.api.models.HostConfiguration;
 import managed.fleet.api.models.InstanceConfiguration;
@@ -48,7 +49,7 @@ public class InstanceConfigurationManager implements IInstanceConfigurationManag
     }
 
     private List<InstanceTypeConfiguration> loadInstanceTypeConfiguration() {
-        File directoryPath = new File("C:/Users/Andrew/IdeaProjects/Managed Severs/InstanceType.json");
+        File directoryPath = new File(ConfigurationManger.getSection("Path:InstanceTypeConfiguration").toString());
 
         try {
             InstanceTypeConfiguration[] hostsArr = new ObjectMapper().readValue(directoryPath, InstanceTypeConfiguration[].class);
@@ -60,7 +61,7 @@ public class InstanceConfigurationManager implements IInstanceConfigurationManag
     }
 
     private List<ImageTypeConfiguration> loadOsImagesConfiguration() {
-        File directoryPath = new File("C:/Users/Andrew/IdeaProjects/Managed Severs/MachineImages.json");
+        File directoryPath = new File(ConfigurationManger.getSection("Path:ImagesConfiguration").toString());
 
         try {
             ImageTypeConfiguration[] hostsArr = new ObjectMapper().readValue(directoryPath, ImageTypeConfiguration[].class);

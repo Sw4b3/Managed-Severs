@@ -1,5 +1,6 @@
 package managed.fleet.api.services;
 
+import common.utlis.ConfigurationManger;
 import managed.fleet.api.interfaces.IHostManager;
 import managed.fleet.api.interfaces.IHostService;
 import managed.fleet.api.interfaces.IInstanceConfigurationManager;
@@ -130,7 +131,7 @@ public class VBoxHostManagerService implements IHostManager {
 
             var imagesMedium = getMachineImageMedium(vbox.getDVDImages(), instanceConfiguration.getOSImage());
 
-            var hddMedium = vbox.createMedium("vdi", "D:/VirtualBox VMs/vm/", AccessMode.ReadWrite, DeviceType.HardDisk);
+            var hddMedium = vbox.createMedium("vdi", ConfigurationManger.getSection("Path:VmSaveLocation").toString(), AccessMode.ReadWrite, DeviceType.HardDisk);
 
             List<MediumVariant> hddMediumVariants = new ArrayList<>();
 
@@ -224,7 +225,7 @@ public class VBoxHostManagerService implements IHostManager {
     }
 
     private void scanMachineImages() {
-        var path = "D:/Machine Images/";
+        var path = ConfigurationManger.getSection("Path:MachineImages").toString();
 
         File directoryPath = new File(path);
 
