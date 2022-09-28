@@ -15,6 +15,10 @@ public class InstanceConfiguration {
         return ImageTypeConfiguration.getOSImageName();
     }
 
+    public ImageTypeConfiguration geImageTypeConfiguration() {
+        return ImageTypeConfiguration;
+    }
+
     public int getCpuCount() {
         return InstanceTypeConfiguration.getCpuCount();
     }

@@ -108,14 +108,12 @@ public class VBoxHostManagerService implements IHostManager {
     private void createMachine(HostConfiguration hostConfiguration) {
         var vbox = webserverSession.getVbox();
 
-        scanMachineImages();
-
         try {
             var instanceConfiguration = instanceManagerService.getInstanceConfiguration(hostConfiguration);
 
             var hostName = "vm_" + UUID.randomUUID() + "";
 
-            var host = vbox.createMachine(null, hostName, null, "Other_64", null);
+            var host = vbox.createMachine(null, hostName, null, instanceConfiguration.geImageTypeConfiguration().getName(), null);
 
             host.setMemorySize(instanceConfiguration.getMemoryConfiguration());
 
@@ -128,8 +126,6 @@ public class VBoxHostManagerService implements IHostManager {
             var storageController = host.addStorageController("SATA", StorageBus.SATA);
 
             storageController.setPortCount(2L);
-
-            var imagesMedium = getMachineImageMedium(vbox.getDVDImages(), instanceConfiguration.getOSImage());
 
             var hddMedium = vbox.createMedium("vdi", ConfigurationManger.getSection("Path:VmSaveLocation").toString(), AccessMode.ReadWrite, DeviceType.HardDisk);
 
@@ -171,13 +167,14 @@ public class VBoxHostManagerService implements IHostManager {
 
             host.attachDevice("SATA", 0, 0, DeviceType.HardDisk, hddMedium);
 
-            host.attachDevice("SATA", 1, 0, DeviceType.DVD, imagesMedium);
-
             host.saveSettings();
 
             session.unlockMachine();
 
             logger.info("Host Created");
+
+            runUnattendedInstallation(vbox, hostName, ConfigurationManger.getSection("Path:MachineImages").toString()
+                    + instanceConfiguration.getOSImage());
 
             launchMachine(hostName);
 
@@ -185,6 +182,38 @@ public class VBoxHostManagerService implements IHostManager {
             logger.error("Failed to create Host::" + e);
             e.printStackTrace();
         }
+    }
+
+    private void runUnattendedInstallation(IVirtualBox vbox, String hostName, String IsoPath) {
+        var unattended = vbox.createUnattendedInstaller();
+
+        var machine = vbox.findMachine(hostName);
+
+        unattended.setMachine(machine);
+        unattended.setIsoPath(IsoPath);
+        unattended.setFullUserName("vboxadmin");
+        unattended.setUser("vboxadmin");
+        unattended.setPassword("P@ssword12345!");
+        unattended.setInstallGuestAdditions(true);
+        unattended.setLocale("en_US");
+        unattended.setTimeZone("South Africa Standard Time");
+        unattended.setLanguage("en-us");
+
+        logger.info("Host prepare");
+
+        unattended.prepare();
+
+        logger.info("Host construct Media");
+
+        unattended.constructMedia();
+
+        logger.info("Host reconfigure VM");
+
+        unattended.reconfigureVM();
+
+        logger.info("Host done");
+
+        unattended.done();
     }
 
     private void deregisteredMachine(String machineName) {
@@ -199,9 +228,10 @@ public class VBoxHostManagerService implements IHostManager {
     }
 
     private void waitToUnlock(ISession session, IMachine machine) {
-        session.unlockMachine();
-
         var sessionState = machine.getSessionState();
+
+        if (!SessionState.Spawning.equals(sessionState))
+            session.unlockMachine();
 
         while (!SessionState.Unlocked.equals(sessionState)) {
             sessionState = machine.getSessionState();

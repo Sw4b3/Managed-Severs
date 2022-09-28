@@ -1,13 +1,18 @@
 [
   {
-    "name": "Windows Server",
-    "osType": "Windows",
+    "name": "Windows7_64",
+    "osType": "WindowsServer",
     "imageName": "Windows_Server_2016_Datacenter_EVAL_en-us_14393_refresh.ISO"
   },
   {
-    "name": "Ubuntu",
+    "name": "Windows10_64",
+    "osType": "Windows",
+    "imageName": "Win10_21H2_English_x64.iso"
+  },
+  {
+    "name": "Ubuntu_64",
     "osType": "Ubuntu",
-    "imageName": "ubuntu-22.04.1-desktop-amd64.iso"
+    "imageName": "ubuntu-18.04.6-desktop-amd64.iso"
   },
   {
     "name": "Mac",
