@@ -70,7 +70,7 @@ public class VBoxHostManagerService implements IHostManager {
             try {
                 var progress = machine.launchVMProcess(session, "gui", null);
 
-                progress.waitForCompletion(1000);
+                progress.waitForCompletion(10000);
             } finally {
                 waitToUnlock(session, machine);
             }
@@ -115,9 +115,13 @@ public class VBoxHostManagerService implements IHostManager {
 
             var host = vbox.createMachine(null, hostName, null, instanceConfiguration.geImageTypeConfiguration().getName(), null);
 
+            host.setDescription(instanceConfiguration.geImageTypeConfiguration().getName() + "::"
+                    + instanceConfiguration.getMemoryConfiguration() + "RAM::"
+                    + instanceConfiguration.getCpuCount() + "Core CPU");
+
             host.setMemorySize(instanceConfiguration.getMemoryConfiguration());
 
-            host.getGraphicsAdapter().setVRAMSize(18L);
+            host.getGraphicsAdapter().setVRAMSize(128L);
 
             host.setCPUCount((long) instanceConfiguration.getCpuCount());
 
@@ -125,7 +129,7 @@ public class VBoxHostManagerService implements IHostManager {
 
             var storageController = host.addStorageController("SATA", StorageBus.SATA);
 
-            storageController.setPortCount(2L);
+            storageController.setPortCount(5L);
 
             var hddMedium = vbox.createMedium("vdi", ConfigurationManger.getSection("Path:VmSaveLocation").toString(), AccessMode.ReadWrite, DeviceType.HardDisk);
 
@@ -184,6 +188,10 @@ public class VBoxHostManagerService implements IHostManager {
         }
     }
 
+    /*
+     * https://www.virtualbox.org/ticket/20917
+     * Tracking a bug related to unattended Installation regarding Ubuntu
+     */
     private void runUnattendedInstallation(IVirtualBox vbox, String hostName, String IsoPath) {
         var unattended = vbox.createUnattendedInstaller();
 
@@ -230,8 +238,10 @@ public class VBoxHostManagerService implements IHostManager {
     private void waitToUnlock(ISession session, IMachine machine) {
         var sessionState = machine.getSessionState();
 
-        if (!SessionState.Spawning.equals(sessionState))
-            session.unlockMachine();
+        if (SessionState.Spawning.equals(sessionState))
+            return;
+
+        session.unlockMachine();
 
         while (!SessionState.Unlocked.equals(sessionState)) {
             sessionState = machine.getSessionState();
@@ -239,7 +249,7 @@ public class VBoxHostManagerService implements IHostManager {
             try {
                 logger.info("Waiting for session unlock::" + sessionState.name() + "::" + machine.getName());
 
-                Thread.sleep(1000L);
+                Thread.sleep(30000L);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
