@@ -19,18 +19,26 @@ public class VboxHostService implements IHostService {
     }
 
     public List<Host> scanHosts() {
+        logger.info("Scanning Hosts");
+
         return webserverSession.execute(() -> scanMachine());
     }
 
     public MachineState GetHostState(String machineName) {
+        logger.info("Getting Hosts State::" + machineName);
+
         return webserverSession.execute(() -> GetMachineState(machineName));
     }
 
     public String getHostIPv4(String machineName) {
+        logger.info("Getting Hosts Ip::" + machineName);
+
         return webserverSession.execute(() -> getMachineIPv4(machineName));
     }
 
     public boolean hostExists(String machineName) {
+        logger.info("Checking if Hosts exist::" + machineName);
+
         return webserverSession.execute(() -> machineExists(machineName));
     }
 

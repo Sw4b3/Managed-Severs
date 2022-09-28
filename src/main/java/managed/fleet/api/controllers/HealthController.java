@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/health")
 public class HealthController {
 
-    @GetMapping(path = "/", produces = "application/json")
+    @GetMapping
     public String CreateHost() {
         return "Healthy";
     }

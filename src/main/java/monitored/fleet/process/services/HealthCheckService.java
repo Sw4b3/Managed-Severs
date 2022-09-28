@@ -40,12 +40,13 @@ public class HealthCheckService implements Runnable {
             return;
         }
 
-        List<Host> hosts = scanHosts();
 
         var cancellationToken = false;
 
         while (!cancellationToken) {
             try {
+                List<Host> hosts = scanHosts();
+
                 if (hosts.isEmpty())
                     throw new RuntimeException("There are no hosts");
 
@@ -69,8 +70,7 @@ public class HealthCheckService implements Runnable {
 
                             terminateHost(host.getName());
                         }
-                    }
-                    if (host.getState().equals(MachineState.PoweredOff)) {
+                    } else if (host.getState().equals(MachineState.PoweredOff)) {
                         logger.info("Starting host::" + host.getName());
 
                         startHost(host.getName());
@@ -78,7 +78,6 @@ public class HealthCheckService implements Runnable {
                 }
 
                 Thread.sleep(configuration.getWait());
-
             } catch (IOException | InterruptedException e) {
                 logger.error(e.toString());
             }
@@ -125,7 +124,7 @@ public class HealthCheckService implements Runnable {
     }
 
     private void startHost(String hostName) {
-        var response = httpClient.PostRequest(ConfigurationManger.getSection("Url:FleetApi")+"/hostmanager/start", hostName);
+        var response = httpClient.GetRequest(ConfigurationManger.getSection("Url:FleetApi") + "/hostmanager/start?hostName=" + hostName);
 
         if (response.statusCode() == 200)
             logger.info("Host successfully started");
@@ -134,7 +133,7 @@ public class HealthCheckService implements Runnable {
     }
 
     private void terminateHost(String hostName) {
-        var response = httpClient.PostRequest("http://localhost:8080/hostmanager/terminate", hostName);
+        var response = httpClient.GetRequest("http://localhost:8080/hostmanager/terminate?hostName=" + hostName);
 
         if (response.statusCode() == 200)
             logger.info("Host successfully terminated");
@@ -148,7 +147,7 @@ public class HealthCheckService implements Runnable {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
 
-            var response = httpClient.GetRequest(ConfigurationManger.getSection("Url:FleetApi")+"/Host/GetHosts");
+            var response = httpClient.GetRequest(ConfigurationManger.getSection("Url:FleetApi") + "/Host/GetHosts");
 
             Host[] hostsArr = objectMapper.readValue(response.body().toString(), Host[].class);
 
